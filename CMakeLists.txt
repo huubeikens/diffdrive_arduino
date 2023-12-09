@@ -17,13 +17,10 @@ find_package(hardware_interface REQUIRED)
 find_package(controller_manager REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(jsoncpp REQUIRED)
 
-
-
-
-
-
-add_library(diffdrive_arduino SHARED src/diffdrive_arduino.cpp src/wheel.cpp src/arduino_comms.cpp)
+add_library(diffdrive_arduino SHARED src/diffdrive_arduino.cpp src/wheel.cpp src/arduino_comms.cpp )
+target_link_libraries( diffdrive_arduino jsoncpp_lib)
 
 target_include_directories(
   diffdrive_arduino
@@ -37,6 +34,7 @@ ament_target_dependencies(
   serial
   rclcpp
   pluginlib
+  jsoncpp
 )
 
 pluginlib_export_plugin_description_file(hardware_interface robot_hardware.xml)
@@ -57,6 +55,7 @@ ament_target_dependencies(
   controller_manager
   rclcpp
   pluginlib
+  jsoncpp
 )
 
 pluginlib_export_plugin_description_file(hardware_interface fake_robot_hardware.xml)
@@ -88,6 +87,7 @@ ament_export_dependencies(
   serial
   rclcpp
   pluginlib
+  jsoncpp
 )
 
 ament_package()

@@ -3,6 +3,8 @@
 
 #include <serial/serial.h>
 #include <cstring>
+#include "rclcpp/rclcpp.hpp"
+#include <jsoncpp/json/json.h>
 
 class ArduinoComms
 {
@@ -10,12 +12,8 @@ class ArduinoComms
 
 public:
 
-  ArduinoComms()
-  {  }
-
-  ArduinoComms(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms)
-      : serial_conn_(serial_device, baud_rate, serial::Timeout::simpleTimeout(timeout_ms))
-  {  }
+  ArduinoComms();
+  ArduinoComms(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms);
 
   void setup(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms);
   void sendEmptyMsg();
@@ -30,6 +28,7 @@ public:
 
 private:
   serial::Serial serial_conn_;  ///< Underlying serial connection 
+  rclcpp::Logger logger_;
 };
 
 #endif // DIFFDRIVE_ARDUINO_ARDUINO_COMMS_H

@@ -4,6 +4,16 @@
 #include <sstream>
 #include <cstdlib>
 
+ArduinoComms::ArduinoComms()     : logger_(rclcpp::get_logger("DiffDriveArduino"))
+{  
+
+}
+
+ArduinoComms::ArduinoComms(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms)
+      : serial_conn_(serial_device, baud_rate, serial::Timeout::simpleTimeout(timeout_ms)), logger_(rclcpp::get_logger("DiffDriveArduino"))
+{  
+
+}
 
 void ArduinoComms::setup(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms)
 {  
@@ -24,22 +34,33 @@ void ArduinoComms::sendEmptyMsg()
 
 void ArduinoComms::readEncoderValues(int &val_1, int &val_2)
 {
-    std::string response = sendMsg("e\r");
+    std::string response = sendMsg("s\r");
 
-    std::string delimiter = " ";
-    size_t del_pos = response.find(delimiter);
-    std::string token_1 = response.substr(0, del_pos);
-    std::string token_2 = response.substr(del_pos + delimiter.length());
-
-    val_1 = std::atoi(token_1.c_str());
-    val_2 = std::atoi(token_2.c_str());
+    Json::Reader jsonReader;
+    Json::Value  statusJsonObj;
+    jsonReader.parse(response, statusJsonObj);
+    const Json::Value& motorStatusObj = statusJsonObj["m"];
+    val_1 = motorStatusObj[0].asInt();
+    val_2 = motorStatusObj[1].asInt();
+    RCLCPP_INFO_STREAM(logger_,"readEncoderValues val1: " << val_1);
+    RCLCPP_INFO_STREAM(logger_,"readEncoderValues val2: " << val_2);
 }
 
 void ArduinoComms::setMotorValues(int val_1, int val_2)
 {
-    std::stringstream ss;
-    ss << "m " << val_1 << " " << val_2 << "\r";
-    sendMsg(ss.str(), false);
+    std::stringstream ss1;
+    ss1 << "r on" << "\r";
+    sendMsg(ss1.str(), false);
+
+    val_1 = val_1 * .9;
+    val_2 = val_2 * .9;
+    std::stringstream ss2;
+    ss2 << "m " << val_1 << " " << val_2 << "\r";
+    sendMsg(ss2.str(), false);
+
+    RCLCPP_INFO_STREAM(logger_,"setMotorValues val1: " << val_1);
+    RCLCPP_INFO_STREAM(logger_,"setMotorValues val2: " << val_2);
+
 }
 
 void ArduinoComms::setPidValues(float k_p, float k_d, float k_i, float k_o)
@@ -56,8 +77,8 @@ std::string ArduinoComms::sendMsg(const std::string &msg_to_send, bool print_out
 
     if (print_output)
     {
-        // RCLCPP_INFO_STREAM(logger_,"Sent: " << msg_to_send);
-        // RCLCPP_INFO_STREAM(logger_,"Received: " << response);
+        RCLCPP_INFO_STREAM(logger_,"Sent: " << msg_to_send);
+        RCLCPP_INFO_STREAM(logger_,"Received: " << response);
     }
 
     return response;

@@ -39,9 +39,11 @@ void ArduinoComms::readEncoderValues(int &val_1, int &val_2)
     Json::Reader jsonReader;
     Json::Value  statusJsonObj;
     jsonReader.parse(response, statusJsonObj);
+  
     const Json::Value& motorStatusObj = statusJsonObj["m"];
     val_1 = motorStatusObj[0].asInt();
     val_2 = motorStatusObj[1].asInt();
+    
     RCLCPP_INFO_STREAM(logger_,"readEncoderValues val1: " << val_1);
     RCLCPP_INFO_STREAM(logger_,"readEncoderValues val2: " << val_2);
 }

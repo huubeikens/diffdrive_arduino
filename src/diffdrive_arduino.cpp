@@ -56,6 +56,9 @@ std::vector<hardware_interface::StateInterface> DiffDriveArduino::export_state_i
   state_interfaces.emplace_back(hardware_interface::StateInterface(r_wheel_.name, hardware_interface::HW_IF_VELOCITY, &r_wheel_.vel));
   state_interfaces.emplace_back(hardware_interface::StateInterface(r_wheel_.name, hardware_interface::HW_IF_POSITION, &r_wheel_.pos));
 
+  RCLCPP_INFO_STREAM(logger_,"export_state_interfaces l_wheel_.vel:" << l_wheel_.vel << " l_wheel_.pos:" << l_wheel_.pos);
+  RCLCPP_INFO_STREAM(logger_,"export_state_interfaces r_wheel_.vel:" << r_wheel_.vel << " r_wheel_.pos:" << r_wheel_.pos);
+ 
   return state_interfaces;
 }
 
@@ -67,7 +70,9 @@ std::vector<hardware_interface::CommandInterface> DiffDriveArduino::export_comma
 
   command_interfaces.emplace_back(hardware_interface::CommandInterface(l_wheel_.name, hardware_interface::HW_IF_VELOCITY, &l_wheel_.cmd));
   command_interfaces.emplace_back(hardware_interface::CommandInterface(r_wheel_.name, hardware_interface::HW_IF_VELOCITY, &r_wheel_.cmd));
-
+  
+  RCLCPP_INFO_STREAM(logger_,"export_state_interfaces l_wheel_.cmd:" << l_wheel_.cmd << " r_wheel_.cmd:" << r_wheel_.cmd);
+ 
   return command_interfaces;
 }
 
@@ -121,8 +126,11 @@ hardware_interface::return_type DiffDriveArduino::read()
   r_wheel_.pos = r_wheel_.calcEncAngle();
   r_wheel_.vel = (r_wheel_.pos - pos_prev) / deltaSeconds;
 
-
-
+  RCLCPP_INFO_STREAM(logger_,"read() l_wheel_.pos: " << l_wheel_.pos);
+  RCLCPP_INFO_STREAM(logger_,"read() l_wheel_.pos: " << l_wheel_.vel);
+  RCLCPP_INFO_STREAM(logger_,"read() r_wheel_.pos: " << r_wheel_.pos);
+  RCLCPP_INFO_STREAM(logger_,"read() r_wheel_.pos: " << r_wheel_.vel);
+  
   return return_type::OK;
 
   
@@ -136,6 +144,8 @@ hardware_interface::return_type DiffDriveArduino::write()
     return return_type::ERROR;
   }
 
+  RCLCPP_INFO_STREAM(logger_,"wite() l_wheel_.cmd:" << l_wheel_.cmd << " r_wheel_.cmd:" << r_wheel_.cmd);
+ 
   arduino_.setMotorValues(l_wheel_.cmd / l_wheel_.rads_per_count / cfg_.loop_rate, r_wheel_.cmd / r_wheel_.rads_per_count / cfg_.loop_rate);
 
 

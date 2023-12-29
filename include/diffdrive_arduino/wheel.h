@@ -2,32 +2,30 @@
 #define DIFFDRIVE_ARDUINO_WHEEL_H
 
 #include <string>
-
-
+#include <chrono>
 
 class Wheel
 {
     public:
+    Wheel()         = default;
+    void            setup(const std::string & aName, int aMsPerRevelation, double aMaxVelocity);
+    std::string&    getName();
+    int             getMotorValue();
+    void            update();
 
-    std::string name = "";
-    int enc = 0;
-    double cmd = 0;
-    double pos = 0;
-    double vel = 0;
-    double eff = 0;
-    double velSetPt = 0;
-    double rads_per_count = 0;
+    double          mPosition;              // Angle in radians (pi)
+    double          mVelocity;              // Actual velocity in meter/second
+    double          mCommandedVelocity;     // Requested velocity in meter/second
 
-    Wheel() = default;
+    private:
+    // Wheel specific variables
+    double          mMaxVelocity;           // Velocity when wheel is turning
+    int             mMsPerRevelation;       // Time for 1 revelation in ms
+    std::string     mName;                  // Name of the wheel
 
-    Wheel(const std::string &wheel_name, int counts_per_rev);
-    
-    void setup(const std::string &wheel_name, int counts_per_rev);
-
-    double calcEncAngle();
-
-
-
+    // State variables
+    unsigned long   mUpdateTimestamp;
+    int             mMotorValue;            // PWM value for the motor
 };
 
 

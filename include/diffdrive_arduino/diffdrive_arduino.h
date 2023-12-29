@@ -39,20 +39,16 @@ public:
 
   return_type write() override;
 
-
+  void enableLittleMonster();
 
 private:
 
-  Config cfg_;
-  ArduinoComms arduino_;
+  Config        mConfig;
+  ArduinoComms  mArduino;
+  Wheel         mLeftWheel;
+  Wheel         mRightWheel;
 
-  Wheel l_wheel_;
-  Wheel r_wheel_;
-
-  rclcpp::Logger logger_;
-
-  std::chrono::time_point<std::chrono::system_clock> time_;
-  
+  rclcpp::Logger mLogger;
 };
 
 

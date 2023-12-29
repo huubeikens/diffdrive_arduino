@@ -3,19 +3,49 @@
 #include <cmath>
 
 
-Wheel::Wheel(const std::string &wheel_name, int counts_per_rev)
+void Wheel::setup(const std::string & aName, int aMsPerRevelation, double aMaxVelocity)
 {
-  setup(wheel_name, counts_per_rev);
+  mName               = aName;
+  mMsPerRevelation    = aMsPerRevelation;
+  mMaxVelocity        = aMaxVelocity;
+  mVelocity           = 0;
+  mPosition           = 0;
+  mCommandedVelocity  = 0;
+  mMotorValue         = 0;
 }
 
-
-void Wheel::setup(const std::string &wheel_name, int counts_per_rev)
+void Wheel::update()
 {
-  name = wheel_name;
-  rads_per_count = (2*M_PI)/counts_per_rev;
+  if ( mVelocity == 0 && mCommandedVelocity != 0) {
+    // Wheel is not turning but is commanded to turn
+    mUpdateTimestamp = std::chrono::system_clock::now().time_since_epoch()/std::chrono::milliseconds(1); // Starting time of wheel turning
+  } 
+
+  unsigned long lNow = std::chrono::system_clock::now().time_since_epoch()/std::chrono::milliseconds(1);
+
+  if (mCommandedVelocity > 0) {
+    // Wheel is commanded to go forward
+    mPosition += ( ((2*M_PI)/ mMsPerRevelation ) * (lNow - mUpdateTimestamp) ); // Add delta position
+    mVelocity = mMaxVelocity;
+    mMotorValue = 255;
+  }
+  else if (mCommandedVelocity < 0) {
+    // Wheel is commanded to go backward
+    mPosition -= ( ((2*M_PI)/ mMsPerRevelation ) * (lNow - mUpdateTimestamp) ); // Substract delta position
+    mVelocity = -mMaxVelocity;
+    mMotorValue = -255;
+  } else {
+    // Commanded velocity is zero
+    mVelocity = 0;
+    mMotorValue = 0;
+  }
+
+   mUpdateTimestamp = lNow;
 }
 
-double Wheel::calcEncAngle()
-{
-  return enc * rads_per_count;
+int Wheel::getMotorValue() {
+  return mMotorValue;
+}
+std::string& Wheel::getName() {
+  return mName;
 }

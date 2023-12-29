@@ -1,6 +1,14 @@
+// This file is not used, don't know why...
+
+/*
 #include <ros/ros.h>
 #include <controller_manager/controller_manager.h>
 #include "diffdrive_arduino/diffdrive_arduino.h"
+
+void timer_callback(DiffDriveArduino& robot)
+{
+  robot.enableLittleMonster();
+}
 
 int main(int argc, char **argv)
 {
@@ -12,7 +20,7 @@ int main(int argc, char **argv)
   // Attempt to retrieve parameters. If they don't exist, the default values from the struct will be used
   n.getParam("left_wheel_name", robot_cfg.left_wheel_name);
   n.getParam("right_wheel_name", robot_cfg.right_wheel_name);
-  n.getParam("baud_rate", robot_cfg.baud_rate);
+  n.getParam("baud_rate", robot_cfg.aBaudRate);
   n.getParam("device", robot_cfg.device);
   n.getParam("enc_counts_per_rev", robot_cfg.enc_counts_per_rev);
   n.getParam("robot_loop_rate", robot_cfg.loop_rate);
@@ -20,6 +28,8 @@ int main(int argc, char **argv)
 
   DiffDriveArduino robot(robot_cfg);
   controller_manager::ControllerManager cm(&robot);
+
+  timer_t timer_ = cm->create_wall_timer(1s, boost::bind(&timer_callback, &robot));
 
   ros::AsyncSpinner spinner(1);
   spinner.start();
@@ -37,3 +47,5 @@ int main(int argc, char **argv)
     loop_rate.sleep();
   }
 }
+
+*/

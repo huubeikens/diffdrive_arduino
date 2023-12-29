@@ -6,13 +6,9 @@
 
 
 
-DiffDriveArduino::DiffDriveArduino()
-    : logger_(rclcpp::get_logger("DiffDriveArduino"))
-{}
-
-
-
-
+DiffDriveArduino::DiffDriveArduino() : mLogger(rclcpp::get_logger("DiffDriveArduino"))
+{
+}
 
 return_type DiffDriveArduino::configure(const hardware_interface::HardwareInfo & info)
 {
@@ -20,116 +16,107 @@ return_type DiffDriveArduino::configure(const hardware_interface::HardwareInfo &
     return return_type::ERROR;
   }
 
-  RCLCPP_INFO(logger_, "Configuring...");
+  RCLCPP_INFO(mLogger, "Configuring...");
 
-  time_ = std::chrono::system_clock::now();
+  mConfig.leftWheelName               = info_.hardware_parameters["left_wheel_name"];
+  mConfig.rightWheelName              = info_.hardware_parameters["right_wheel_name"];
+  mConfig.loopRate                    = std::stof(info_.hardware_parameters["loop_rate"]);
+  mConfig.serialDevice                = info_.hardware_parameters["device"];
+  mConfig.serialBaudrate              = std::stoi(info_.hardware_parameters["baud_rate"]);
+  mConfig.timeout                     = std::stoi(info_.hardware_parameters["timeout"]);
+  mConfig.msPerRevelationLeftWheel    = std::stoi(info_.hardware_parameters["ms_per_revelation_left_wheel"]);
+  mConfig.msPerRevelationRightWheel   = std::stoi(info_.hardware_parameters["ms_per_revelation_right_wheel"]);
 
-  cfg_.left_wheel_name = info_.hardware_parameters["left_wheel_name"];
-  cfg_.right_wheel_name = info_.hardware_parameters["right_wheel_name"];
-  cfg_.loop_rate = std::stof(info_.hardware_parameters["loop_rate"]);
-  cfg_.device = info_.hardware_parameters["device"];
-  cfg_.baud_rate = std::stoi(info_.hardware_parameters["baud_rate"]);
-  cfg_.timeout = std::stoi(info_.hardware_parameters["timeout"]);
-  cfg_.enc_counts_per_rev = std::stoi(info_.hardware_parameters["enc_counts_per_rev"]);
+  double lWheelRadius = 0.098; // TODO; get this value from the my_controllers.yaml
+  double lMaxVelocityLeftWheel = (2*M_PI * lWheelRadius)/(mConfig.msPerRevelationLeftWheel/1000.0); // Calculate velocity in meter per seconds
+  double lMaxVelocityRightWheel = (2*M_PI * lWheelRadius)/(mConfig.msPerRevelationRightWheel/1000.0); // Calculate velocity in meter per seconds
 
   // Set up the wheels
-  l_wheel_.setup(cfg_.left_wheel_name, cfg_.enc_counts_per_rev);
-  r_wheel_.setup(cfg_.right_wheel_name, cfg_.enc_counts_per_rev);
+  mLeftWheel.setup(mConfig.leftWheelName, mConfig.msPerRevelationLeftWheel, lMaxVelocityLeftWheel);
+  mRightWheel.setup(mConfig.rightWheelName, mConfig.msPerRevelationRightWheel, lMaxVelocityRightWheel);
 
   // Set up the Arduino
-  arduino_.setup(cfg_.device, cfg_.baud_rate, cfg_.timeout);  
+  mArduino.setup(mConfig.serialDevice, mConfig.serialBaudrate, mConfig.timeout);
+  // TODO: remove this sleep!!! We also need to wait 2 seconds for the serial interface on the arduino to settle.
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000)); //
+  enableLittleMonster();
 
-  RCLCPP_INFO(logger_, "Finished Configuration");
+  RCLCPP_INFO(mLogger, "Finished Configuration");
 
   status_ = hardware_interface::status::CONFIGURED;
+
   return return_type::OK;
 }
 
 std::vector<hardware_interface::StateInterface> DiffDriveArduino::export_state_interfaces()
 {
-  // We need to set up a position and a velocity interface for each wheel
-
   std::vector<hardware_interface::StateInterface> state_interfaces;
 
-  state_interfaces.emplace_back(hardware_interface::StateInterface(l_wheel_.name, hardware_interface::HW_IF_VELOCITY, &l_wheel_.vel));
-  state_interfaces.emplace_back(hardware_interface::StateInterface(l_wheel_.name, hardware_interface::HW_IF_POSITION, &l_wheel_.pos));
-  state_interfaces.emplace_back(hardware_interface::StateInterface(r_wheel_.name, hardware_interface::HW_IF_VELOCITY, &r_wheel_.vel));
-  state_interfaces.emplace_back(hardware_interface::StateInterface(r_wheel_.name, hardware_interface::HW_IF_POSITION, &r_wheel_.pos));
-
-  RCLCPP_INFO_STREAM(logger_,"export_state_interfaces l_wheel_.vel:" << l_wheel_.vel << " l_wheel_.pos:" << l_wheel_.pos);
-  RCLCPP_INFO_STREAM(logger_,"export_state_interfaces r_wheel_.vel:" << r_wheel_.vel << " r_wheel_.pos:" << r_wheel_.pos);
+  RCLCPP_INFO(mLogger, "Setup publishing position and velocity for each wheel");
+  state_interfaces.emplace_back(hardware_interface::StateInterface(mLeftWheel.getName(), hardware_interface::HW_IF_VELOCITY, &mLeftWheel.mVelocity));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(mLeftWheel.getName(), hardware_interface::HW_IF_POSITION, &mLeftWheel.mPosition));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(mRightWheel.getName(), hardware_interface::HW_IF_VELOCITY, &mRightWheel.mVelocity));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(mRightWheel.getName(), hardware_interface::HW_IF_POSITION, &mRightWheel.mPosition));
  
   return state_interfaces;
 }
 
 std::vector<hardware_interface::CommandInterface> DiffDriveArduino::export_command_interfaces()
 {
-  // We need to set up a velocity command interface for each wheel
-
   std::vector<hardware_interface::CommandInterface> command_interfaces;
 
-  command_interfaces.emplace_back(hardware_interface::CommandInterface(l_wheel_.name, hardware_interface::HW_IF_VELOCITY, &l_wheel_.cmd));
-  command_interfaces.emplace_back(hardware_interface::CommandInterface(r_wheel_.name, hardware_interface::HW_IF_VELOCITY, &r_wheel_.cmd));
+  RCLCPP_INFO(mLogger, "Setup subscription for velocity command requests");
+  command_interfaces.emplace_back(hardware_interface::CommandInterface(mLeftWheel.getName(), hardware_interface::HW_IF_VELOCITY, &mLeftWheel.mCommandedVelocity));
+  command_interfaces.emplace_back(hardware_interface::CommandInterface(mRightWheel.getName(), hardware_interface::HW_IF_VELOCITY, &mRightWheel.mCommandedVelocity));
   
-  RCLCPP_INFO_STREAM(logger_,"export_state_interfaces l_wheel_.cmd:" << l_wheel_.cmd << " r_wheel_.cmd:" << r_wheel_.cmd);
- 
   return command_interfaces;
 }
 
 
 return_type DiffDriveArduino::start()
 {
-  RCLCPP_INFO(logger_, "Starting Controller...");
-
-  arduino_.sendEmptyMsg();
-  // arduino.setPidValues(9,7,0,100);
-  // arduino.setPidValues(14,7,0,100);
-  arduino_.setPidValues(30, 20, 0, 100);
+  RCLCPP_INFO(mLogger, "Starting Controller...");
 
   status_ = hardware_interface::status::STARTED;
-
   return return_type::OK;
 }
 
+void DiffDriveArduino::enableLittleMonster()
+{
+  if (!mArduino.isConnected())
+  {
+    RCLCPP_ERROR(mLogger, "Not connected to Arduino...");
+  } else {
+    RCLCPP_INFO(mLogger, "Turning Little Monster Master Relay on. It's now armed and ready!");
+    mArduino.setMasterRelay(true);  
+  }
+}
 return_type DiffDriveArduino::stop()
 {
-  RCLCPP_INFO(logger_, "Stopping Controller...");
+  RCLCPP_INFO(mLogger, "Stopping Controller...");
   status_ = hardware_interface::status::STOPPED;
-
   return return_type::OK;
 }
 
+/*
+ * Callback function: Publish new wheel position and velocity states
+ */ 
 hardware_interface::return_type DiffDriveArduino::read()
 {
-
-  // TODO fix chrono duration
-
-  // Calculate time delta
-  auto new_time = std::chrono::system_clock::now();
-  std::chrono::duration<double> diff = new_time - time_;
-  double deltaSeconds = diff.count();
-  time_ = new_time;
-
-
-  if (!arduino_.connected())
+  if (!mArduino.isConnected())
   {
+    RCLCPP_ERROR(mLogger, "Not connected to Arduino...");
     return return_type::ERROR;
   }
 
-  arduino_.readEncoderValues(l_wheel_.enc, r_wheel_.enc);
+  /*
+   * Update wheel position and velocity topic variables (part of Wheel class)
+   */
+  mLeftWheel.update();
+  mRightWheel.update();
 
-  double pos_prev = l_wheel_.pos;
-  l_wheel_.pos = l_wheel_.calcEncAngle();
-  l_wheel_.vel = (l_wheel_.pos - pos_prev) / deltaSeconds;
-
-  pos_prev = r_wheel_.pos;
-  r_wheel_.pos = r_wheel_.calcEncAngle();
-  r_wheel_.vel = (r_wheel_.pos - pos_prev) / deltaSeconds;
-
-  RCLCPP_INFO_STREAM(logger_,"read() l_wheel_.pos: " << l_wheel_.pos);
-  RCLCPP_INFO_STREAM(logger_,"read() l_wheel_.pos: " << l_wheel_.vel);
-  RCLCPP_INFO_STREAM(logger_,"read() r_wheel_.pos: " << r_wheel_.pos);
-  RCLCPP_INFO_STREAM(logger_,"read() r_wheel_.pos: " << r_wheel_.vel);
+  RCLCPP_INFO_STREAM(mLogger,"Publish left wheel  : velocity=" << mLeftWheel.mVelocity << " , position=" << mLeftWheel.mPosition);
+  RCLCPP_INFO_STREAM(mLogger,"Publish right wheel : velocity=" << mRightWheel.mVelocity << " , position=" << mRightWheel.mPosition);
   
   return return_type::OK;
 
@@ -138,23 +125,20 @@ hardware_interface::return_type DiffDriveArduino::read()
 
 hardware_interface::return_type DiffDriveArduino::write()
 {
-
-  if (!arduino_.connected())
+  // Callback function when receiving a new velocity command requests
+  if (!mArduino.isConnected())
   {
+    RCLCPP_ERROR(mLogger, "Not connected to Arduino...");
     return return_type::ERROR;
   }
 
-  RCLCPP_INFO_STREAM(logger_,"wite() l_wheel_.cmd:" << l_wheel_.cmd << " r_wheel_.cmd:" << r_wheel_.cmd);
- 
-  arduino_.setMotorValues(l_wheel_.cmd / l_wheel_.rads_per_count / cfg_.loop_rate, r_wheel_.cmd / r_wheel_.rads_per_count / cfg_.loop_rate);
+  RCLCPP_INFO_STREAM(mLogger,"Received left wheel velocity command  =" << mLeftWheel.mCommandedVelocity );
+  RCLCPP_INFO_STREAM(mLogger,"Received right wheel velocity command =" << mRightWheel.mCommandedVelocity );
 
-
-
-
-  return return_type::OK;
-
-
-  
+  mLeftWheel.update();
+  mRightWheel.update();
+  mArduino.setMotorValues(mLeftWheel.getMotorValue(), mRightWheel.getMotorValue());
+  return return_type::OK;  
 }
 
 

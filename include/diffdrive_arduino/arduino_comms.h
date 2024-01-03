@@ -23,6 +23,10 @@ private:
   rclcpp::Logger mLogger;
   
   std::string sendMessage(const std::string &aMessage);
+
+  int   mLeftWheelValue;
+  int   mRightWheelValue;
+  bool  mTurnOn;
 };
 
 #endif // DIFFDRIVE_ARDUINO_ARDUINO_COMMS_H

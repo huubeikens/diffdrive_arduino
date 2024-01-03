@@ -8,6 +8,7 @@
 
 DiffDriveArduino::DiffDriveArduino() : mLogger(rclcpp::get_logger("DiffDriveArduino"))
 {
+  rcutils_ret_t ret = rcutils_logging_set_logger_level("DiffDriveArduino", RCUTILS_LOG_SEVERITY_INFO); 
 }
 
 return_type DiffDriveArduino::configure(const hardware_interface::HardwareInfo & info)
@@ -115,8 +116,8 @@ hardware_interface::return_type DiffDriveArduino::read()
   mLeftWheel.update();
   mRightWheel.update();
 
-  RCLCPP_INFO_STREAM(mLogger,"Publish left wheel  : velocity=" << mLeftWheel.mVelocity << " , position=" << mLeftWheel.mPosition);
-  RCLCPP_INFO_STREAM(mLogger,"Publish right wheel : velocity=" << mRightWheel.mVelocity << " , position=" << mRightWheel.mPosition);
+  RCLCPP_DEBUG_STREAM(mLogger,"Publish left wheel  : velocity=" << mLeftWheel.mVelocity << " , position=" << mLeftWheel.mPosition);
+  RCLCPP_DEBUG_STREAM(mLogger,"Publish right wheel : velocity=" << mRightWheel.mVelocity << " , position=" << mRightWheel.mPosition);
   
   return return_type::OK;
 
@@ -132,11 +133,9 @@ hardware_interface::return_type DiffDriveArduino::write()
     return return_type::ERROR;
   }
 
-  RCLCPP_INFO_STREAM(mLogger,"Received left wheel velocity command  =" << mLeftWheel.mCommandedVelocity );
-  RCLCPP_INFO_STREAM(mLogger,"Received right wheel velocity command =" << mRightWheel.mCommandedVelocity );
+  RCLCPP_DEBUG_STREAM(mLogger,"Received left wheel velocity command  =" << mLeftWheel.mCommandedVelocity );
+  RCLCPP_DEBUG_STREAM(mLogger,"Received right wheel velocity command =" << mRightWheel.mCommandedVelocity );
 
-  mLeftWheel.update();
-  mRightWheel.update();
   mArduino.setMotorValues(mLeftWheel.getMotorValue(), mRightWheel.getMotorValue());
   return return_type::OK;  
 }

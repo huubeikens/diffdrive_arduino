@@ -5,7 +5,10 @@
 #include <cstdlib>
 
 ArduinoComms::ArduinoComms()
-: mLogger(rclcpp::get_logger("DiffDriveArduino"))
+: mLogger(rclcpp::get_logger("DiffDriveArduino")),
+mLeftWheelValue(0),
+mRightWheelValue(0),
+mTurnOn(false)
 {  
 
 }
@@ -38,27 +41,33 @@ void ArduinoComms::getStatus(int &val_1, int &val_2)
 }
 */
 
-void ArduinoComms::setMasterRelay(bool turnOn)
+void ArduinoComms::setMasterRelay(bool aTurnOn)
 {
     std::string message;
  
-    if (turnOn) {
-        message = "r on";
-    } else {
-        message = "r off";
+    if (mTurnOn != aTurnOn) {
+        // Only send changes to the hardware
+        if (aTurnOn) {
+            message = "r on";
+        } else {
+            message = "r off";
+        }
     }
+    mTurnOn = aTurnOn;
     sendMessage(message);
-
-    message = "s";
-     sendMessage(message);
 }
 
 
 void ArduinoComms::setMotorValues(int aLeftWheelValue, int aRightWheelValue)
 {
-    std::stringstream message;
-    message << "m " << aLeftWheelValue << " " << aRightWheelValue;
-    sendMessage(message.str());
+    if (mLeftWheelValue != aLeftWheelValue || mRightWheelValue != aRightWheelValue) {
+        // Only send changes to the hardware
+        std::stringstream message;
+        message << "m " << aRightWheelValue << " " << aLeftWheelValue;
+        sendMessage(message.str());
+    }
+    mLeftWheelValue = aLeftWheelValue;
+    mRightWheelValue = aRightWheelValue;
 }
 
 std::string ArduinoComms::sendMessage(const std::string &aMessage)

@@ -6,14 +6,14 @@
 
 struct Config
 {
-  std::string     leftWheelName             = "left_wheel";
-  std::string     rightWheelName            = "right_wheel";
+  std::string     leftWheelName             = "left_wheel_joint";
+  std::string     rightWheelName            = "right_wheel_joint";
   float           loopRate                  = 30;
-  std::string     serialDevice              = "/dev/ttyUSB0";
+  std::string     serialDevice              = "/dev/ttyAMA0";
   int             serialBaudrate            = 57600;
   int             timeout                   = 1000;
-  int             msPerRevelationLeftWheel  = 35000;
-  int             msPerRevelationRightWheel = 35000;
+  int             msPerRevelationLeftWheel  = 2667;
+  int             msPerRevelationRightWheel = 2667;
 
 };
 

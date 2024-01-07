@@ -1,15 +1,11 @@
 #include "diffdrive_arduino/diffdrive_arduino.h"
-
-
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-
-
-
 
 DiffDriveArduino::DiffDriveArduino() : mLogger(rclcpp::get_logger("DiffDriveArduino"))
 {
   rcutils_ret_t ret = rcutils_logging_set_logger_level("DiffDriveArduino", RCUTILS_LOG_SEVERITY_INFO); 
 }
+
 
 return_type DiffDriveArduino::configure(const hardware_interface::HardwareInfo & info)
 {
